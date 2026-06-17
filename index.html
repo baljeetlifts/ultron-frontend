@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Chatbot Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #080808;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #e8e8e8;
+  }
+
+  .app {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    background: #0d0d0d;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    background: #111111;
+    display: flex;
+    flex-direction: column;
+    border-right: 0.5px solid #2a2a2a;
+    transition: width 0.25s ease;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .sidebar.collapsed { width: 52px; }
+
+  .sidebar-top {
+    padding: 14px 10px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 0.5px solid #1e1e1e;
+  }
+
+  .toggle-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #aaa;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .toggle-btn:hover { background: #1e1e1e; color: #fff; }
+
+  .new-chat-btn {
+    flex: 1;
+    display: flex; align-items: center; gap: 7px;
+    background: #1a1a1a;
+    border: 0.5px solid #303030;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 13px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .new-chat-btn:hover { background: #222; }
+  .new-chat-btn i { font-size: 15px; flex-shrink: 0; }
+  .sidebar.collapsed .new-chat-btn { padding: 7px; justify-content: center; }
+  .sidebar.collapsed .new-chat-btn span { display: none; }
+
+  .sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 8px;
+    scrollbar-width: none;
+  }
+  .sidebar-body::-webkit-scrollbar { display: none; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 6px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sidebar.collapsed .section-label { display: none; }
+
+  .conv-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .conv-item:hover { background: #1a1a1a; }
+  .conv-item.active { background: #1e1e1e; }
+  .conv-item i { font-size: 14px; color: #666; flex-shrink: 0; }
+  .conv-item span { font-size: 13px; color: #bbb; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar.collapsed .conv-item span { display: none; }
+
+  .sidebar-footer {
+    padding: 10px 8px;
+    border-top: 0.5px solid #1e1e1e;
+  }
+  .user-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .user-row:hover { background: #1a1a1a; }
+
+  .avatar-sm {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; color: #fff;
+    flex-shrink: 0;
+  }
+  .user-row span { font-size: 13px; color: #bbb; white-space: nowrap; overflow: hidden; }
+  .sidebar.collapsed .user-row span { display: none; }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0d0d0d;
+    min-width: 0;
+  }
+
+  .topbar {
+    padding: 14px 20px;
+    border-bottom: 0.5px solid #1e1e1e;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .topbar-title { font-size: 14px; font-weight: 500; color: #ccc; }
+  .topbar-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { background: #1a1a1a; color: #bbb; }
+
+  /* ── Chat area ── */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a2a transparent;
+  }
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+
+  .msg-row { display: flex; gap: 12px; align-items: flex-start; max-width: 720px; }
+  .msg-row.user { flex-direction: row-reverse; align-self: flex-end; }
+
+  .msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg-avatar.ai { background: #1a1a2e; border: 0.5px solid #2a2a4a; color: #a29bfe; font-size: 14px; }
+  .msg-avatar.user { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; }
+
+  .msg-bubble {
+    padding: 11px 15px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #ddd;
+    max-width: 520px;
+  }
+  .msg-bubble.ai { background: #161616; border: 0.5px solid #252525; border-radius: 4px 14px 14px 14px; }
+  .msg-bubble.user { background: #1e1a3a; border: 0.5px solid #2d2850; border-radius: 14px 4px 14px 14px; color: #e0dff8; }
+
+  .msg-meta { font-size: 11px; color: #444; margin-top: 5px; padding: 0 2px; }
+  .msg-row.user .msg-meta { text-align: right; }
+
+  /* Typing indicator */
+  .typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+  .typing span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #555;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+
+  /* ── Input area ── */
+  .input-area { padding: 14px 20px 20px; flex-shrink: 0; }
+
+  .input-box {
+    display: flex; align-items: flex-end; gap: 10px;
+    background: #161616;
+    border: 0.5px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 10px 12px;
+    transition: border-color 0.15s;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .input-box:focus-within { border-color: #4a4a7a; }
+
+  .attach-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    margin-bottom: 1px;
+  }
+  .attach-btn:hover { color: #aaa; }
+
+  .chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    line-height: 1.5;
+    max-height: 120px;
+    min-height: 24px;
+    scrollbar-width: none;
+  }
+  .chat-input::-webkit-scrollbar { display: none; }
+  .chat-input::placeholder { color: #444; }
+
+  .send-btn {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: #5a4fcf;
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #6c5ce7; }
+  .send-btn:active { transform: scale(0.94); }
+
+  .input-footer { display: flex; justify-content: center; margin-top: 9px; }
+  .input-hint { font-size: 11px; color: #333; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <button class="toggle-btn" id="toggleBtn" aria-label="Toggle sidebar">
+        <i class="ti ti-layout-sidebar-left-collapse" id="toggleIcon"></i>
+      </button>
+      <button class="new-chat-btn" onclick="startNewChat()">
+        <i class="ti ti-edit" aria-hidden="true"></i>
+        <span>New chat</span>
+      </button>
+    </div>
+
+    <div class="sidebar-body">
+      <div class="section-label">Today</div>
+      <div class="conv-item active"><i class="ti ti-message" aria-hidden="true"></i><span>Dark UI Dashboard Design</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Explain quantum entanglement</span></div>
+
+      <div class="section-label">Yesterday</div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>React vs Vue comparison</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Best pasta recipe ideas</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>SQL query optimization</span></div>
+
+      <div class="section-label">Last 7 days</div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Write a cover letter</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Python data analysis tips</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Morning routine planning</span></div>
+      <div class="conv-item"><i class="ti ti-message" aria-hidden="true"></i><span>Travel itinerary Tokyo</span></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="avatar-sm">JD</div>
+        <span>John Doe</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title">Dark UI Dashboard Design</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" title="Share"><i class="ti ti-share" aria-hidden="true"></i></button>
+        <button class="icon-btn" title="More options"><i class="ti ti-dots" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="msg-row">
+        <div class="msg-avatar ai"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
+        <div>
+          <div class="msg-bubble ai">Hello! I'm your AI assistant. How can I help you today? Feel free to ask me anything — I'm here to assist you with code, writing, research, and much more.</div>
+          <div class="msg-meta">9:41 AM</div>
+        </div>
+      </div>
+
+      <div class="msg-row user">
+        <div class="msg-avatar user">JD</div>
+        <div>
+          <div class="msg-bubble user">Can you build me a stunning dark-themed AI chatbot interface dashboard?</div>
+          <div class="msg-meta">9:42 AM</div>
+        </div>
+      </div>
+
+      <div class="msg-row">
+        <div class="msg-avatar ai"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
+        <div>
+          <div class="msg-bubble ai">Absolutely! Here's what I built for you — a sleek, modern dark UI with a collapsible sidebar, recent conversation history, smooth message bubbles with avatars, and a polished input bar at the bottom. ✨<br><br>The sidebar collapses to icons only, and you can type a message below to continue the conversation!</div>
+          <div class="msg-meta">9:42 AM</div>
+        </div>
+      </div>
+
+      <div id="typingIndicator" style="display:none">
+        <div class="msg-row">
+          <div class="msg-avatar ai"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
+          <div>
+            <div class="msg-bubble ai">
+              <div class="typing"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-box">
+        <button class="attach-btn" title="Attach file" aria-label="Attach file">
+          <i class="ti ti-paperclip" aria-hidden="true"></i>
+        </button>
+        <textarea class="chat-input" id="chatInput" placeholder="Message AI assistant..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMessage()" aria-label="Send message">
+          <i class="ti ti-arrow-up" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="input-hint">AI can make mistakes. Double-check important information.</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const toggleIcon = document.getElementById('toggleIcon');
+  const chatArea = document.getElementById('chatArea');
+  const chatInput = document.getElementById('chatInput');
+  const typingIndicator = document.getElementById('typingIndicator');
+
+  toggleBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    toggleIcon.className = sidebar.classList.contains('collapsed')
+      ? 'ti ti-layout-sidebar-left-expand'
+      : 'ti ti-layout-sidebar-left-collapse';
+  });
+
+  chatInput.addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  function getTime() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function addMessage(text, isUser) {
+    const row = document.createElement('div');
+    row.className = 'msg-row' + (isUser ? ' user' : '');
+    const avatarHtml = isUser
+      ? '<div class="msg-avatar user">JD</div>'
+      : '<div class="msg-avatar ai"><i class="ti ti-sparkles" aria-hidden="true"></i></div>';
+    const bubbleClass = isUser ? 'user' : 'ai';
+    row.innerHTML = avatarHtml + `<div><div class="msg-bubble ${bubbleClass}">${text}</div><div class="msg-meta">${getTime()}</div></div>`;
+    chatArea.insertBefore(row, typingIndicator);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  // ── Backend endpoint ──────────────────────────────────────────────────────
+  const API_URL = 'http://localhost:5152/api/chat';
+
+  // Track whether a request is in flight so we don't double-send
+  let isSending = false;
+
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isSending) return;
+
+    // 1. Show the user's message immediately
+    addMessage(text, true);
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+
+    // 2. Show the animated loading bubble
+    isSending = true;
+    typingIndicator.style.display = 'block';
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    try {
+      // 3. POST to the C# ASP.NET Core backend
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      if (!response.ok) {
+        // Surface the HTTP error message from the server if available
+        let errDetail = `Server error ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error) errDetail = errJson.error;
+        } catch (_) { /* ignore parse failure */ }
+        throw new Error(errDetail);
+      }
+
+      // 4. Parse the { "reply": "..." } response from ChatController
+      const data = await response.json();
+      const aiReply = data.reply || '(No response received)';
+
+      // 5. Hide loading bubble and display real AI reply
+      typingIndicator.style.display = 'none';
+      addMessage(aiReply, false);
+
+    } catch (err) {
+      // 6. On any error show a friendly inline error bubble
+      typingIndicator.style.display = 'none';
+      addMessage(
+        `⚠️ Could not reach the AI backend.<br><small style="color:#888">${err.message}</small>`,
+        false
+      );
+    } finally {
+      isSending = false;
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+  }
+
+  function startNewChat() {
+    const msgs = chatArea.querySelectorAll('.msg-row:not(#typingIndicator .msg-row)');
+    msgs.forEach(m => m.remove());
+    addMessage("Hello! Starting a fresh conversation. What would you like to explore today?", false);
+  }
+</script>
+</body>
+</html>
